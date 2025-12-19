@@ -101,6 +101,9 @@ class Settings(BaseSettings):
     MAX_UPLOAD_SIZE_MB: int = 100
     UPLOAD_DIR: str = "/tmp/msg2act/uploads"
 
+    # Frontend
+    FRONTEND_URL: str = "http://localhost:5173"
+
     class Config:
         env_file = ".env"
         case_sensitive = True

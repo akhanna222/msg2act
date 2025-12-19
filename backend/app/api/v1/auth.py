@@ -22,10 +22,10 @@ router = APIRouter()
 @router.get("/auth/google/connect")
 async def google_oauth_connect():
     """
-    Initiate Google OAuth flow
+    Get Google OAuth authorization URL
 
     Returns:
-        RedirectResponse: Redirect to Google's OAuth consent screen
+        str: Google OAuth authorization URL
     """
     flow = Flow.from_client_config(
         {
@@ -48,7 +48,8 @@ async def google_oauth_connect():
         prompt="consent",  # Force consent to get refresh token
     )
 
-    return RedirectResponse(url=authorization_url)
+    # Return URL as plain string for frontend to redirect
+    return authorization_url
 
 
 @router.get("/auth/google/callback")
@@ -166,40 +167,45 @@ async def google_oauth_callback(code: str, db: Session = Depends(get_db)):
             gmail_source.updated_at = datetime.utcnow()
             db.commit()
 
-        # Create access token for our app
-        access_token = create_access_token(data={"sub": str(user.id), "email": user.email})
+        # Trigger email sync task
+        try:
+            from app.tasks.email_tasks import sync_gmail_account
+            sync_gmail_account.delay(str(user.id), historical_days=30)
+        except Exception as sync_error:
+            print(f"Failed to trigger sync task: {sync_error}")
 
-        # In production, redirect to frontend with token
-        # For now, return JSON response
-        return {
-            "access_token": access_token,
-            "token_type": "bearer",
-            "user": {
-                "id": str(user.id),
-                "email": user.email,
-                "name": user.full_name,
-            },
-            "message": "Gmail connected successfully! Email sync will begin shortly.",
-        }
+        # Redirect to frontend with success
+        frontend_url = settings.FRONTEND_URL if hasattr(settings, 'FRONTEND_URL') else "http://localhost:5173"
+        return RedirectResponse(url=f"{frontend_url}/dashboard?gmail_connected=true")
 
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"OAuth flow failed: {str(e)}",
-        )
+        # Redirect to frontend with error
+        frontend_url = settings.FRONTEND_URL if hasattr(settings, 'FRONTEND_URL') else "http://localhost:5173"
+        return RedirectResponse(url=f"{frontend_url}/dashboard?gmail_error={str(e)}")
 
 
-@router.get("/auth/status")
-async def auth_status(db: Session = Depends(get_db)):
+@router.get("/data-sources")
+async def get_data_sources(db: Session = Depends(get_db)):
     """
-    Check authentication status and connected services
+    Get all data sources (connected accounts)
 
     Returns:
-        dict: List of connected services for the user
+        dict: List of data sources
     """
-    # In production, this would require authentication
-    # For now, just return sample data
+    # For MVP, return all data sources without authentication
+    # In production, this would be filtered by authenticated user
+    sources = db.query(DataSource).filter(DataSource.is_active == True).all()
+
     return {
-        "authenticated": False,
-        "message": "Please implement authentication middleware"
+        "sources": [
+            {
+                "id": str(source.id),
+                "source_type": source.source_type,
+                "source_name": source.source_name,
+                "status": source.status,
+                "last_sync_at": source.last_sync_at.isoformat() if source.last_sync_at else None,
+                "total_items_synced": source.total_items_synced,
+            }
+            for source in sources
+        ]
     }
