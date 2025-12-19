@@ -7,6 +7,8 @@ from .data_source import DataSource
 from .message import Message
 from .entity import Entity, EntityMention
 from .relationship import Relationship
+from .email_category import EmailCategory, EmailTag
+from .workflow import Workflow, WorkflowExecution
 
 __all__ = [
     "User",
@@ -16,4 +18,8 @@ __all__ = [
     "Entity",
     "EntityMention",
     "Relationship",
+    "EmailCategory",
+    "EmailTag",
+    "Workflow",
+    "WorkflowExecution",
 ]

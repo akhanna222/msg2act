@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.database import engine, Base
-from app.api.v1 import auth, health, entities, messages
+from app.api.v1 import auth, health, entities, messages, categories, workflows
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -33,6 +33,8 @@ app.include_router(health.router, prefix=settings.API_V1_PREFIX, tags=["health"]
 app.include_router(auth.router, prefix=settings.API_V1_PREFIX, tags=["authentication"])
 app.include_router(entities.router, prefix=settings.API_V1_PREFIX, tags=["entities"])
 app.include_router(messages.router, prefix=settings.API_V1_PREFIX, tags=["messages"])
+app.include_router(categories.router, prefix=settings.API_V1_PREFIX, tags=["categories"])
+app.include_router(workflows.router, prefix=settings.API_V1_PREFIX, tags=["workflows"])
 
 @app.get("/")
 async def root():
