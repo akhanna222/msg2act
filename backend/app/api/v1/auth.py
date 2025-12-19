@@ -48,8 +48,8 @@ async def google_oauth_connect():
         prompt="consent",  # Force consent to get refresh token
     )
 
-    # Return URL as plain string for frontend to redirect
-    return authorization_url
+    # Return URL as JSON for frontend
+    return {"auth_url": authorization_url}
 
 
 @router.get("/auth/google/callback")
